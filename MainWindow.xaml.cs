@@ -26,64 +26,65 @@ namespace wpfbook01
             // Entity Framework DbContext
             var dbcontext = new BooksEntities();
 
-            // get authors and ISBNs of each book they co-authored
-            var authorsAndISBNs =
-               from author in dbcontext.Authors
-               from book in author.Titles
-               orderby author.LastName, author.FirstName
-               select new { author.FirstName, author.LastName, book.ISBN };
 
-            outputTextBox.AppendText("Authors and ISBNs:");
 
-            // display authors and ISBNs in tabular format
-            foreach (var element in authorsAndISBNs)
+            // query 1: titles and authors, sorted by title only
+            var sortedTitlesAndAuthors =
+                from book in dbcontext.Titles
+                from author in book.Authors
+                orderby book.Title1
+                select new { book.Title1, author.FirstName, author.LastName };
+
+            outputTextBox.AppendText("Titles and Authors:");
+            foreach (var element in sortedTitlesAndAuthors)
             {
-                outputTextBox.AppendText($"\r\n\t{element.FirstName,-10} " +
-                   $"{element.LastName,-10} {element.ISBN,-10}");
+                outputTextBox.AppendText($"\r\n\t{element.Title1,-10}: " +
+                   $"{element.FirstName,-10} {element.LastName,-10}");
             }
 
-            // get authors and titles of each book they co-authored
-            var authorsAndTitles =
-               from book in dbcontext.Titles
-               from author in book.Authors
-               orderby author.LastName, author.FirstName, book.Title1
-               select new { author.FirstName, author.LastName, book.Title1 };
-
-            outputTextBox.AppendText("\r\n\r\nAuthors and titles:");
-
-            // display authors and titles in tabular format
-            foreach (var element in authorsAndTitles)
-            {
-                outputTextBox.AppendText($"\r\n\t{element.FirstName,-10} " +
-                   $"{element.LastName,-10} {element.Title1}");
-            }
-
-            // get authors and titles of each book 
-            // they co-authored; group by author
-            var titlesByAuthor =
-               from author in dbcontext.Authors
-               orderby author.LastName, author.FirstName
-               select new
-               {
-                   Name = author.FirstName + " " +author.LastName,
-                   Titles =
-                     from book in author.Titles
-                     orderby book.Title1
-                     select book.Title1
-               };
-
-            outputTextBox.AppendText("\r\n\r\nTitles grouped by author:");
-
-            // display titles written by each author, grouped by author
-            foreach (var author in titlesByAuthor)
-            {
-                // display author's name
-                outputTextBox.AppendText($"\r\n\t{author.Name}:");
-
-                // display titles written by that author
-                foreach (var title in author.Titles)
+            // query 2: titles and authors, sorted by title, then authors by last/first name
+            var titlesAndSortedAuthors =
+                from book in dbcontext.Titles
+                orderby book.Title1
+                select new
                 {
-                    outputTextBox.AppendText($"\r\n\t\t{title}");
+                    book.Title1,
+                    Authors = from author in book.Authors
+                              orderby author.LastName, author.FirstName
+                              select new { author.FirstName, author.LastName }
+                };
+            outputTextBox.AppendText("\r\n\nAuthors and titles with authors sorted for each title:\r\n");
+            foreach (var title in titlesAndSortedAuthors)
+            {
+                foreach (var author in title.Authors)
+                {
+                    outputTextBox.AppendText($"\r\n\t{title.Title1,-10}: " +
+                        $"{author.FirstName,-10} {author.LastName,-10}");
+                }
+            }
+
+            // query 3: authors grouped by title, sorted by title; for a given title sort the author names alphabetically by last name first then first name
+            var titlesGroupedByAuthors =
+                from book in dbcontext.Titles
+                orderby book.Title1
+                select new
+                {
+                    Title = book.Title1,
+                    Authors = from author in book.Authors
+                              orderby author.LastName, author.FirstName
+                              select new
+                              {
+                                  author.FirstName,
+                                  author.LastName
+                              }
+                };
+            outputTextBox.AppendText("\r\n\nTitles grouped by author:\r\n\r\n");
+            foreach (var book in titlesGroupedByAuthors)
+            {
+                outputTextBox.AppendText($"\r\n{book.Title}:\r\n");
+                foreach (var author in book.Authors)
+                {
+                    outputTextBox.AppendText($"\t{author.FirstName, -10} {author.LastName,-10}\r\n");
                 }
             }
         }
